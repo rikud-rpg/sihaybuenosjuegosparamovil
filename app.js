@@ -16,7 +16,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
         });
 
-        const response = await fetch('juegos.db');
+        const response = await fetch('Juegos.db');
         if (response.ok) {
             const buf = await response.arrayBuffer();
             db = new SQL.Database(new Uint8Array(buf));
