@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Registro - Asistente Relacional Avanzado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { gamer: { bg: '#07090e', card: '#0f141d', accent: '#00ff88', emerald: '#10b981', border: '#1a2433' } } } } }
+    </script>
+</head>
+<body class="bg-gamer-bg text-gray-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-xl w-full bg-gamer-card border border-gamer-border rounded-2xl p-6 shadow-2xl relative">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between pb-4 mb-6 border-b border-gamer-border">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold text-white">Asistente SQL Relacional</h1>
+                <p id="stepIndicator" class="text-xs text-emerald-400">Selecciona una modalidad</p>
+            </div>
+        </div>
+        <a href="index.html" class="text-xs text-gray-400 hover:text-emerald-400 transition">
+            <i class="fa-solid fa-arrow-left mr-1"></i> Volver al Catálogo
+        </a>
+    </div>
+
+    <!-- Contenedor Dinámico -->
+    <div id="stepContainer" class="space-y-4"></div>
+
+    <!-- Navegación -->
+    <div class="flex justify-between mt-8 pt-4 border-t border-gamer-border" id="wizardNav">
+        <button id="prevBtn" onclick="prevStep()" class="hidden px-4 py-2 bg-gray-900 border border-gamer-border rounded-xl text-xs font-semibold text-gray-300 hover:text-white transition">
+            <i class="fa-solid fa-arrow-left mr-1"></i> Anterior
+        </button>
+        <button id="nextBtn" onclick="nextStep()" class="ml-auto px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-bold text-xs rounded-xl transition shadow-md">
+            Siguiente <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+    </div>
+
+</div>
+
+<script>
+    const ETIQUETAS_DISPONIBLES = [
+        "Historia", "Sin Historia", "Offline", "Online", "Plataforma", 
+        "FPS", "MOBA", "Premium", "Gratis", "Original (Móvil)", "Competitivo", "Deportes", "Casual", 
+        "Carreras", "Español", "Anime", "Ports (Oficiales)", "Estrategia", "Pixel Art"
+    ];
+
+    let mode = ""; 
+    let currentStep = 0; 
+
+    let formData = {
+        nombre: "", estudio: "", anio: "", esTop: 0, disponible: 1,
+        url: "", banner: "", video: "", reviewHTML: "", etiquetas: [], secuelas: []
+    };
+
+    let existingSecuela = {
+        juegoId: "", nombre: "", anio: "", esTop: 1, disponible: 1,
+        url: "", banner: "", video: "", reviewHTML: "", etiquetas: []
+    };
+
+    let tempSecuela = { nombre: "", anio: "", esTop: 1, disponible: 1, url: "", banner: "", video: "", reviewHTML: "", etiquetas: [] };
+
+    function setMode(selectedMode) {
+        mode = selectedMode;
+        currentStep = 1;
+        renderStep();
+    }
+
+    function renderStep() {
+        const container = document.getElementById('stepContainer');
+        const indicator = document.getElementById('stepIndicator');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const wizardNav = document.getElementById('wizardNav');
+
+        if (currentStep === 0) {
+            wizardNav.classList.add('hidden');
+            indicator.textContent = "Selección de operación";
+            container.innerHTML = `
+                <div class="space-y-4 py-2">
+                    <label class="block text-xs font-bold uppercase text-gray-400 text-center mb-4">¿Qué deseas realizar hoy?</label>
+                    <button onclick="setMode('NEW_GAME')" class="w-full p-4 bg-gray-950 border border-gamer-border hover:border-emerald-400 rounded-xl flex items-center gap-4 transition group text-left">
+                        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-gray-950 transition">
+                            <i class="fa-solid fa-folder-plus text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-white group-hover:text-emerald-300">Registrar Juego Nuevo desde cero</h3>
+                            <p class="text-xs text-gray-400">Captura la franquicia base y opcionalmente sus secuelas.</p>
+                        </div>
+                    </button>
+
+                    <button onclick="setMode('EXISTING_GAME')" class="w-full p-4 bg-gray-950 border border-gamer-border hover:border-emerald-400 rounded-xl flex items-center gap-4 transition group text-left">
+                        <div class="w-10 h-10 rounded-lg bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:bg-teal-400 group-hover:text-gray-950 transition">
+                            <i class="fa-solid fa-code-branch text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-white group-hover:text-teal-300">Añadir Secuela a un Juego Existente</h3>
+                            <p class="text-xs text-gray-400">Asocia una entrega nueva a un juego ya registrado en tu .db.</p>
+                        </div>
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        wizardNav.classList.remove('hidden');
+
+        if (mode === 'NEW_GAME') {
+            const totalSteps = 10;
+            indicator.textContent = `Paso ${currentStep} de ${totalSteps} (Nuevo Juego)`;
+            prevBtn.classList.toggle('hidden', currentStep === 1);
+            nextBtn.textContent = currentStep === totalSteps ? 'Finalizar y Generar SQL' : 'Siguiente';
+
+            switch(currentStep) {
+                case 1:
+                    container.innerHTML = `<label class="block text-xs font-bold uppercase text-gray-400 mb-1">Nombre del Juego Principal:</label><input type="text" id="inputVal" value="${formData.nombre}" placeholder="Ej. Epic Conquest" class="w-full bg-gray-950 border border-gamer-border rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-400 transition">`;
+                    break;
+                case 2:
+                    container.innerHTML = `<label class="block text-xs font-bold uppercase text-gray-400 mb-1">Estudio / Desarrollador:</label><input type="text" id="inputVal" value="${formData.estudio}" placeholder="Ej. Gaco Games" class="w-full bg-gray-950 border border-gamer-border rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-400 transition">`;
+                    break;
+                case 3:
+                    container.innerHTML = `<label class="block text-xs font-bold uppercase text-gray-400 mb-1">Año de Lanzamiento:</label><input type="number" id="inputVal" value="${formData.anio}" placeholder="Ej. 2017" class="w-full bg-gray-950 border border-gamer-border rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-400 transition">`;
+                    break;
+                case 4:
+                    container.innerHTML = `<label class="block text-xs font-bold uppercase text-gray-400 mb-2">¿Es Top Game (Destacado)?</label><div class="grid grid-cols-2 gap-3"><button type="button" onclick="setOption('esTop', 1)" class="p-3 rounded-xl border text-sm font-bold transition ${formData.esTop === 1 ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300' : 'bg-gray-950 border-gamer-border text-gray-400'}">Sí, es Top</button><button type="button" onclick="setOption('esTop', 0)" class="p-3 rounded-xl border text-sm font-bold transition ${formData.esTop === 0 ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300' : 'bg-gray-950 border-gamer-border text-gray-400'}">No</button></div>`;
+                    break;
+                case 5:
+                    container.innerHTML = `<label class="block text-xs font-bold uppercase text-gray-400 mb-2">Estado de Disponibilidad:</label><div class="grid grid-cols-2 gap-3"><button type="button" onclick="setOption('disponible', 1)" class="p-3 rounded-xl border text-sm font-bold transition ${formData.disponible === 1 ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300' : 'bg-gray-950 border-gamer-border text-gray-400'}">Disponible</button><button type="button" onclick="setOption('disponible', 0)" class="p-3 rounded-xl border text-sm font-bold transition ${formData.disponible === 0 ? 'bg-red-500/20 border-red-400 text-red-300' : 'bg-gray-950 border-gamer-border text-gray-400'}">Cerrado</button></div>`;
+                    break;
+                case 6:
+                    container.innerHTML = `<label class="block text-xs font-bold uppercase text-gray-400 mb-1">URL de Descarga:</label><input type="text" id="inputVal" value="${formData.url}" placeholder="https://..." class="w-full bg-gray-950 border border-gamer-border rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-400 transition">`;
+                    break;
+                case 7:
+                    container.innerHTML = `<label class="block text-xs font-bold uppercase text-gray-400 mb-1">URL Imagen Banner:</label><input type="text" id="inputVal" value="${formData.banner}" placeholder="https://..." class="w-full bg-gray-950 border border-gamer-border rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-400 transition">`;
+                    break;
+                case 8:
+                    container.innerHTML = `<label class="block text-xs font-bold uppercase text-gray-400 mb-1">URL Video YouTube:</label><input type="text" id="inputVal" value="${formData.video}" placeholder="https://youtu.be/..." class="w-full bg-gray-950 border border-gamer-border rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-400 transition">`;
+                    break;
+                case 9:
+                    let tagsHtml = ETIQUETAS_DISPONIBLES.map(tag => {
+                        let isSelected = formData.etiquetas.includes(tag);
+                        return `<button type="button" onclick="toggleMainTag('${tag}')" class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition ${isSelected ? 'tag-active bg-emerald-500 text-gray-950 border-emerald-400 font-bold' : 'bg-gray-950 border-gamer-border text-gray-300'}">${tag}</button>`;
+                    }).join('');
+
+                    container.innerHTML = `<div class="space-y-4"><div><label class="block text-xs font-bold uppercase text-gray-400 mb-1">Reseña HTML:</label><textarea id="inputReview" rows="3" class="w-full bg-gray-950 border border-gamer-border rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-400">${formData.reviewHTML}</textarea></div><div><label class="block text-xs font-bold uppercase text-gray-400 mb-2">Etiquetas / Géneros:</label><div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 bg-black/40 rounded-xl border border-gamer-border">${tagsHtml}</div></div></div>`;
+                    break;
+                case 10:
+                    let secuelasListHtml = formData.secuelas.map((sec, idx) => `
+                        <div class="bg-black/50 p-3 rounded-xl border border-gamer-border text-xs mb-3 space-y-1"><div class="flex items-center justify-between font-bold text-emerald-400"><span>🎮 ${sec.nombre} (${sec.anio})</span><button onclick="removeSecuela(${idx})" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></div><p class="text-[10px] text-gray-400">Etiquetas: ${sec.etiquetas.join(', ') || 'Ninguna'}</p></div>
+                    `).join('');
+
+                    let secTagsHtml = ETIQUETAS_DISPONIBLES.map(tag => {
+                        let isSelected = tempSecuela.etiquetas.includes(tag);
+                        return `<button type="button" onclick="toggleSecuelaTag('${tag}')" class="px-2 py-1 rounded border text-[11px] font-semibold transition ${isSelected ? 'tag-active bg-emerald-500 text-gray-950 border-emerald-400 font-bold' : 'bg-gray-950 border-gamer-border text-gray-300'}">${tag}</button>`;
+                    }).join('');
+
+                    container.innerHTML = `
+                        <div class="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+                            <div class="bg-gray-950 p-3 rounded-xl border border-emerald-500/40 text-xs"><h3 class="text-sm font-extrabold text-emerald-400 mb-1">Juego Principal: ${formData.nombre}</h3><p class="text-gray-400">Secuelas añadidas: ${formData.secuelas.length}</p></div>
+                            <div id="secuelasList">${secuelasListHtml}</div>
+                            <div class="p-3 bg-gamer-bg rounded-xl border border-gamer-border space-y-2.5">
+                                <h4 class="text-xs font-bold text-emerald-300"><i class="fa-solid fa-plus mr-1"></i> Agregar Secuela</h4>
+                                <input type="text" id="secName" value="${tempSecuela.nombre}" placeholder="Nombre (Ej. Epic Conquest 2)" class="w-full bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white">
+                                <div class="grid grid-cols-2 gap-2"><input type="number" id="secYear" value="${tempSecuela.anio}" placeholder="Año" class="bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white"><select id="secDisp" class="bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-emerald-300"><option value="1" ${tempSecuela.disponible === 1 ? 'selected' : ''}>Disponible</option><option value="0" ${tempSecuela.disponible === 0 ? 'selected' : ''}>Cerrado</option></select></div>
+                                <input type="text" id="secUrl" value="${tempSecuela.url}" placeholder="URL Descarga" class="w-full bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white">
+                                <input type="text" id="secBanner" value="${tempSecuela.banner}" placeholder="URL Banner" class="w-full bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white">
+                                <input type="text" id="secVideo" value="${tempSecuela.video}" placeholder="URL Video YouTube" class="w-full bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white">
+                                <textarea id="secReview" placeholder="Reseña HTML..." rows="2" class="w-full bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white">${tempSecuela.reviewHTML}</textarea>
+                                <div><label class="block text-[11px] font-bold uppercase text-gray-400 mb-1">Etiquetas Secuela:</label><div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto p-1.5 bg-black/40 rounded-lg border border-gamer-border">${secTagsHtml}</div></div>
+                                <button type="button" onclick="addSecuelaComplete()" class="w-full py-2 bg-emerald-500/20 border border-emerald-400/50 hover:bg-emerald-400 hover:text-gray-950 text-emerald-300 font-bold text-xs rounded-lg transition">Añadir Secuela</button>
+                            </div>
+                            <div><label class="block text-gray-400 font-bold mb-1 text-xs">Script SQL Completo:</label><textarea readonly rows="5" class="w-full bg-black border border-gamer-border rounded-lg p-2 font-mono text-[10px] text-emerald-300 select-all">${generateSQL()}</textarea></div>
+                        </div>
+                    `;
+                    break;
+            }
+        }
+
+        if (mode === 'EXISTING_GAME') {
+            const totalSteps = 2;
+            indicator.textContent = `Paso ${currentStep} de ${totalSteps} (Añadir Secuela a Juego Existente)`;
+            prevBtn.classList.toggle('hidden', currentStep === 1);
+            nextBtn.textContent = currentStep === totalSteps ? 'Generar SQL de Secuela' : 'Siguiente';
+
+            switch(currentStep) {
+                case 1:
+                    container.innerHTML = `
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">ID o Nombre del Juego Padre en tu base de datos:</label>
+                            <input type="text" id="exJuegoId" value="${existingSecuela.juegoId}" placeholder="Ej. 1 o Epic Conquest" class="w-full bg-gray-950 border border-gamer-border rounded-xl p-3 text-sm text-white focus:outline-none focus:border-teal-400 transition">
+                            <p class="text-[11px] text-gray-500 italic">Si colocas el ID (ej. 1), el SQL se vinculará directamente a esa fila.</p>
+
+                            <label class="block text-xs font-bold uppercase text-gray-400 mt-4 mb-1">Nombre de la Secuela:</label>
+                            <input type="text" id="exSecName" value="${existingSecuela.nombre}" placeholder="Ej. Epic Conquest 2" class="w-full bg-gray-950 border border-gamer-border rounded-xl p-3 text-sm text-white focus:outline-none focus:border-teal-400 transition">
+                            
+                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Año:</label>
+                                    <input type="number" id="exSecYear" value="${existingSecuela.anio}" placeholder="Ej. 2020" class="w-full bg-gray-950 border border-gamer-border rounded-xl p-2 text-sm text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Estado:</label>
+                                    <select id="exSecDisp" class="w-full bg-gray-950 border border-gamer-border rounded-xl p-2.5 text-xs text-teal-300">
+                                        <option value="1" ${existingSecuela.disponible === 1 ? 'selected' : ''}>Disponible</option>
+                                        <option value="0" ${existingSecuela.disponible === 0 ? 'selected' : ''}>Cerrado</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 2:
+                    let existingTagsHtml = ETIQUETAS_DISPONIBLES.map(tag => {
+                        let isSelected = existingSecuela.etiquetas.includes(tag);
+                        return `<button type="button" onclick="toggleExistingSecuelaTag('${tag}')" class="px-2 py-1 rounded border text-[11px] font-semibold transition ${isSelected ? 'tag-active bg-teal-500 text-gray-950 border-teal-400 font-bold' : 'bg-gray-950 border-gamer-border text-gray-300'}">${tag}</button>`;
+                    }).join('');
+
+                    container.innerHTML = `
+                        <div class="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+                            <div class="space-y-2">
+                                <label class="block text-xs font-bold uppercase text-gray-400 mb-1">URL Descarga:</label>
+                                <input type="text" id="exSecUrl" value="${existingSecuela.url}" placeholder="https://..." class="w-full bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white">
+                                
+                                <label class="block text-xs font-bold uppercase text-gray-400 mb-1">URL Banner:</label>
+                                <input type="text" id="exSecBanner" value="${existingSecuela.banner}" placeholder="https://..." class="w-full bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white">
+                                
+                                <label class="block text-xs font-bold uppercase text-gray-400 mb-1">URL Video YouTube:</label>
+                                <input type="text" id="exSecVideo" value="${existingSecuela.video}" placeholder="https://..." class="w-full bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white">
+
+                                <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Reseña HTML:</label>
+                                <textarea id="exSecReview" rows="2" class="w-full bg-gray-950 border border-gamer-border rounded-lg p-2 text-xs text-white">${existingSecuela.reviewHTML}</textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-gray-400 mb-1">Etiquetas para esta secuela:</label>
+                                <div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto p-1.5 bg-black/40 rounded-lg border border-gamer-border">${existingTagsHtml}</div>
+                            </div>
+
+                            <div>
+                                <label class="block text-teal-400 font-bold mb-1 text-xs">Script SQL para Secuela Existente:</label>
+                                <textarea readonly rows="5" class="w-full bg-black border border-gamer-border rounded-lg p-2 font-mono text-[10px] text-teal-300 select-all">${generateExistingSecuelaSQL()}</textarea>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+        }
+    }
+
+    function saveInput() {
+        if (mode === 'NEW_GAME') {
+            const input = document.getElementById('inputVal');
+            const reviewInput = document.getElementById('inputReview');
+            if (input) {
+                if (currentStep === 1) formData.nombre = input.value;
+                if (currentStep === 2) formData.estudio = input.value;
+                if (currentStep === 3) formData.anio = input.value;
+                if (currentStep === 6) formData.url = input.value;
+                if (currentStep === 7) formData.banner = input.value;
+                if (currentStep === 8) formData.video = input.value;
+            }
+            if (reviewInput) formData.reviewHTML = reviewInput.value;
+
+            // Guardar también si estamos en el paso 10 rellenando una secuela temporal
+            if (currentStep === 10) {
+                const sName = document.getElementById('secName');
+                const sYear = document.getElementById('secYear');
+                const sDisp = document.getElementById('secDisp');
+                const sUrl = document.getElementById('secUrl');
+                const sBanner = document.getElementById('secBanner');
+                const sVideo = document.getElementById('secVideo');
+                const sReview = document.getElementById('secReview');
+
+                if (sName) tempSecuela.nombre = sName.value;
+                if (sYear) tempSecuela.anio = sYear.value;
+                if (sDisp) tempSecuela.disponible = parseInt(sDisp.value);
+                if (sUrl) tempSecuela.url = sUrl.value;
+                if (sBanner) tempSecuela.banner = sBanner.value;
+                if (sVideo) tempSecuela.video = sVideo.value;
+                if (sReview) tempSecuela.reviewHTML = sReview.value;
+            }
+        }
+
+        if (mode === 'EXISTING_GAME') {
+            if (currentStep === 1) {
+                const juegoId = document.getElementById('exJuegoId');
+                const name = document.getElementById('exSecName');
+                const year = document.getElementById('exSecYear');
+                const disp = document.getElementById('exSecDisp');
+                if (juegoId) existingSecuela.juegoId = juegoId.value;
+                if (name) existingSecuela.nombre = name.value;
+                if (year) existingSecuela.anio = year.value;
+                if (disp) existingSecuela.disponible = parseInt(disp.value);
+            }
+            if (currentStep === 2) {
+                const url = document.getElementById('exSecUrl');
+                const banner = document.getElementById('exSecBanner');
+                const video = document.getElementById('exSecVideo');
+                const review = document.getElementById('exSecReview');
+                if (url) existingSecuela.url = url.value;
+                if (banner) existingSecuela.banner = banner.value;
+                if (video) existingSecuela.video = video.value;
+                if (review) existingSecuela.reviewHTML = review.value;
+            }
+        }
+    }
+
+    function setOption(field, val) {
+        saveInput();
+        formData[field] = val;
+        renderStep();
+    }
+
+    function toggleMainTag(tag) {
+        saveInput();
+        if (tag === "Historia") formData.etiquetas = formData.etiquetas.filter(t => t !== "Sin Historia");
+        else if (tag === "Sin Historia") formData.etiquetas = formData.etiquetas.filter(t => t !== "Historia");
+
+        if (formData.etiquetas.includes(tag)) formData.etiquetas = formData.etiquetas.filter(t => t !== tag);
+        else formData.etiquetas.push(tag);
+        renderStep();
+    }
+
+    function toggleSecuelaTag(tag) {
+        saveInput();
+        if (tag === "Historia") tempSecuela.etiquetas = tempSecuela.etiquetas.filter(t => t !== "Sin Historia");
+        else if (tag === "Sin Historia") tempSecuela.etiquetas = tempSecuela.etiquetas.filter(t => t !== "Historia");
+
+        if (tempSecuela.etiquetas.includes(tag)) tempSecuela.etiquetas = tempSecuela.etiquetas.filter(t => t !== tag);
+        else tempSecuela.etiquetas.push(tag);
+        renderStep();
+    }
+
+    function toggleExistingSecuelaTag(tag) {
+        saveInput();
+        if (tag === "Historia") existingSecuela.etiquetas = existingSecuela.etiquetas.filter(t => t !== "Sin Historia");
+        else if (tag === "Sin Historia") existingSecuela.etiquetas = existingSecuela.etiquetas.filter(t => t !== "Historia");
+
+        if (existingSecuela.etiquetas.includes(tag)) existingSecuela.etiquetas = existingSecuela.etiquetas.filter(t => t !== tag);
+        else existingSecuela.etiquetas.push(tag);
+        renderStep();
+    }
+
+    function addSecuelaComplete() {
+        saveInput();
+        if (!tempSecuela.nombre) { alert("Escribe el nombre de la secuela."); return; }
+
+        formData.secuelas.push({ ...tempSecuela });
+
+        tempSecuela = { nombre: "", anio: "", esTop: 1, disponible: 1, url: "", banner: "", video: "", reviewHTML: "", etiquetas: [] };
+        renderStep();
+    }
+
+    function removeSecuela(index) {
+        saveInput();
+        formData.secuelas.splice(index, 1);
+        renderStep();
+    }
+
+    function generateSQL() {
+        let sql = `-- Registrar Juego Principal\n`;
+        sql += `INSERT INTO juegos (nombre, estudio, anio, esTop, disponible, url, banner, video, reviewHTML) VALUES ('${formData.nombre}', '${formData.estudio}', ${formData.anio || 2026}, ${formData.esTop}, ${formData.disponible}, '${formData.url}', '${formData.banner}', '${formData.video}', '${formData.reviewHTML.replace(/'/g, "''")}');\n\n`;
+
+        sql += `-- Registrar Etiquetas del Juego Principal\n`;
+        formData.etiquetas.forEach(tag => {
+            sql += `INSERT INTO juego_etiquetas (juego_id, etiqueta_id) SELECT (SELECT MAX(id) FROM juegos), id FROM etiquetas WHERE nombre = '${tag}';\n`;
+        });
+
+        if (formData.secuelas.length > 0) {
+            sql += `\n-- Registrar Secuelas\n`;
+            formData.secuelas.forEach(sec => {
+                sql += `INSERT INTO secuelas (juego_id, nombre, anio, esTop, disponible, url, banner, video, reviewHTML) VALUES ((SELECT MAX(id) FROM juegos), '${sec.nombre}', ${sec.anio}, ${sec.esTop}, ${sec.disponible}, '${sec.url}', '${sec.banner}', '${sec.video}', '${sec.reviewHTML.replace(/'/g, "''")}');\n`;
+                sec.etiquetas.forEach(tag => {
+                    sql += `INSERT INTO juego_etiquetas (secuela_id, etiqueta_id) SELECT (SELECT MAX(id) FROM secuelas), id FROM etiquetas WHERE nombre = '${tag}';\n`;
+                });
+            });
+        }
+        return sql;
+    }
+
+    function generateExistingSecuelaSQL() {
+        const isIdNumber = !isNaN(existingSecuela.juegoId);
+        const parentTarget = isIdNumber 
+            ? existingSecuela.juegoId 
+            : `(SELECT id FROM juegos WHERE nombre = '${existingSecuela.juegoId}')`;
+
+        let sql = `-- Insertar Secuela para Juego Existente (ID/Padre: ${existingSecuela.juegoId})\n`;
+        sql += `INSERT INTO secuelas (juego_id, nombre, anio, esTop, disponible, url, banner, video, reviewHTML) VALUES (${parentTarget}, '${existingSecuela.nombre}', ${existingSecuela.anio || 2026}, ${existingSecuela.esTop}, ${existingSecuela.disponible}, '${existingSecuela.url}', '${existingSecuela.banner}', '${existingSecuela.video}', '${existingSecuela.reviewHTML.replace(/'/g, "''")}');\n\n`;
+
+        sql += `-- Enlazar Etiquetas a la Secuela Recién Creada\n`;
+        existingSecuela.etiquetas.forEach(tag => {
+            sql += `INSERT INTO juego_etiquetas (secuela_id, etiqueta_id) SELECT (SELECT MAX(id) FROM secuelas), id FROM etiquetas WHERE nombre = '${tag}';\n`;
+        });
+
+        return sql;
+    }
+
+    function nextStep() {
+        saveInput();
+        const max = mode === 'NEW_GAME' ? 10 : 2;
+        if (currentStep < max) {
+            currentStep++;
+            renderStep();
+        }
+    }
+
+    function prevStep() {
+        saveInput();
+        if (currentStep > 1) {
+            currentStep--;
+            renderStep();
+        } else if (currentStep === 1) {
+            currentStep = 0;
+            renderStep();
+        }
+    }
+
+    renderStep();
+</script>
+
+
+</body>
+</html>

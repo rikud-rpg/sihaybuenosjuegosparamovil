@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Juegos Móviles</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gamer: {
+                            bg: '#07090e',
+                            card: '#0f141d',
+                            accent: '#00ff88',
+                            emerald: '#10b981',
+                            darkGreen: '#064e3b',
+                            border: '#1a2433'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter & FontAwesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Hoja de Estilos Personalizada -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Librería SQL.js (SQLite WebAssembly para el navegador) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+</head>
+<body class="bg-gamer-bg text-gray-100 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- HEADER / FILTROS -->
+    <header class="flex-none bg-gamer-card/90 backdrop-blur-md border-b border-gamer-border z-30 shadow-2xl">
+        <div class="px-4 py-3 flex flex-wrap items-center justify-between gap-4 border-b border-gamer-border/50">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-400 flex items-center justify-center text-gray-950 shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-gamepad text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-green-300 to-teal-200">
+                        JUEGOS PARA MÓVIL
+                    </h1>
+                    <p class="text-xs text-emerald-400/80 font-medium">Catálogo de juegos</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 flex-wrap grow sm:grow-0">
+
+                <div class="relative grow sm:w-48">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="searchInput" placeholder="Buscar juego..." 
+                        class="w-full pl-9 pr-3 py-1.5 bg-gray-950/80 border border-gamer-border rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition">
+                </div>
+
+                <div class="relative">
+                    <select id="availabilityFilter" class="appearance-none bg-gray-950/90 border border-emerald-500/40 rounded-lg px-3 py-1.5 pr-8 text-sm text-emerald-300 font-semibold focus:outline-none focus:border-emerald-400 cursor-pointer shadow-sm">
+                        <option value="ALL">Todas las Disponibilidades</option>
+                        <option value="AVAILABLE">Solo Disponibles</option>
+                        <option value="UNAVAILABLE">Solo No Disponibles / Cerrados</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 text-xs pointer-events-none"></i>
+                </div>
+
+                <div class="relative">
+                    <select id="studioFilter" class="appearance-none bg-gray-950/90 border border-emerald-500/40 rounded-lg px-3 py-1.5 pr-8 text-sm text-emerald-300 font-semibold focus:outline-none focus:border-emerald-400 cursor-pointer shadow-sm">
+                        <option value="ALL">Todos los Estudios</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 text-xs pointer-events-none"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-4 py-2.5 bg-black/40 overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-2 border-b border-gamer-border/40" id="tagsContainer"></div>
+
+        <div class="px-4 py-2 bg-gray-950/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Ordenar por:</span>
+                <button id="sortAZ" onclick="setSortMode('az')" class="px-3 py-1 rounded-md border border-gamer-border bg-gray-900 text-gray-300 hover:text-white hover:border-emerald-500 transition flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-arrow-down-a-z"></i> A-Z
+                </button>
+                <button id="sortZA" onclick="setSortMode('za')" class="px-3 py-1 rounded-md border border-gamer-border bg-gray-900 text-gray-300 hover:text-white hover:border-emerald-500 transition flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-arrow-up-z-a"></i> Z-A
+                </button>
+                <button id="sortYearNew" onclick="setSortMode('year-desc')" class="px-3 py-1 rounded-md border border-gamer-border bg-gray-900 text-gray-300 hover:text-white hover:border-emerald-500 transition flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-calendar-days"></i> Más Recientes
+                </button>
+                <button id="sortYearOld" onclick="setSortMode('year-asc')" class="px-3 py-1 rounded-md border border-gamer-border bg-gray-900 text-gray-300 hover:text-white hover:border-emerald-500 transition flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Más Antiguos
+                </button>
+                <button id="sortBests" onclick="setSortMode('bests')" class="px-3 py-1 rounded-md border border-gamer-border bg-gray-900 text-gray-300 hover:text-yellow-400 hover:border-yellow-500/60 transition flex items-center gap-1.5 font-medium">
+                    <i class="fa-solid fa-star text-yellow-400"></i> Los Mejores (The Bests)
+                </button>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span id="gameCount" class="text-gray-400 font-mono">Cargando base de datos...</span>
+                <button onclick="resetFilters()" class="text-xs text-emerald-400 hover:text-emerald-300 font-semibold underline underline-offset-2 transition">
+                    Restablecer Filtros
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <main class="grow overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-gamer-bg via-gray-950 to-black" id="scrollContainer">
+        <div id="gamesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto"></div>
+
+        <div id="noResults" class="hidden flex-col items-center justify-center py-20 text-center">
+            <div class="w-20 h-20 rounded-full bg-gray-900/80 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-3xl mb-4 shadow-lg shadow-emerald-500/10">
+                <i class="fa-solid fa-ghost"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-200">No se encontraron juegos</h3>
+            <p class="text-sm text-gray-400 mt-1 max-w-md">Prueba a seleccionar menos filtros o busca con un término diferente.</p>
+            <button onclick="resetFilters()" class="mt-4 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-gray-950 font-bold text-xs rounded-lg hover:opacity-90 transition">
+                Limpiar Todos los Filtros
+            </button>
+        </div>
+    </main>
+
+    <!-- POP-UP MODAL DE REVIEW -->
+    <div id="reviewModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-gamer-card border border-emerald-500/50 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col p-6 relative shadow-2xl shadow-emerald-500/20 transform transition-all">
+            <button onclick="closeReviewModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-lg font-bold z-10">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-4 pb-3 border-b border-gamer-border shrink-0">
+                <div class="w-12 h-12 bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xl">
+                    <i class="fa-solid fa-star text-yellow-400"></i>
+                </div>
+                <div>
+                    <h3 id="modalGameTitle" class="text-xl font-extrabold text-white">Título del Juego</h3>
+                    <p class="text-xs text-emerald-400 font-semibold">Reseña y Análisis Detallado</p>
+                </div>
+            </div>
+
+            <div id="modalGameContent" class="overflow-y-auto grow pr-2 text-sm text-gray-300 space-y-4"></div>
+
+            <div class="mt-4 pt-3 border-t border-gamer-border flex justify-end shrink-0">
+                <button onclick="closeReviewModal()" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-bold text-xs transition shadow-md">
+                    Cerrar Reseña
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="flex-none bg-gamer-card border-t border-gamer-border py-2 px-4 text-center text-[11px] text-gray-500">
+        RikuD &copy; 2026
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
